@@ -5,7 +5,7 @@ module.exports = (grunt) ->
             version: '0.1.0',
         clean:
             build:   ['build']
-            release: ['release']
+            release: ['../app']
         copy:
             build:
                 options:
@@ -25,6 +25,8 @@ module.exports = (grunt) ->
                     }
                 ]
             release:
+                options:
+                    punctuation: ''
                 files: [
                     cwd: 'build/'
                     src: ['**/*.*', '*.*', '**/**/*.*']

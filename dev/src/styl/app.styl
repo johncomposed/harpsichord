@@ -1,10 +1,13 @@
-// TEMPORARY STYLES
-body
-  padding 40px 30%
-  background #eee
-  font-family "Raleway", "Open Sans", "HelveticaNeue", "Helvetica Neue", Helvetica, Arial, sans-serif
+//// TEMPORARY STYLES
+//body
+//  padding 40px 30%
+//  background #eee
   
 // REAL STYLES
+body 
+  font-family "Raleway", "Open Sans", "HelveticaNeue", "Helvetica Neue", Helvetica, Arial, sans-serif
+  overflow-y hidden
+
 a
   color #000
   text-decoration none
@@ -13,6 +16,8 @@ a
 main
   background-color #fff
   border-radius 5px
+  margin-top 20px
+  overflow-y scroll
 
 header, section
   display flex
@@ -32,7 +37,7 @@ header
     color #fff
     
   &:before 
-    top 20px
+    top 0px
     left 50%
     border solid transparent
     content " "
