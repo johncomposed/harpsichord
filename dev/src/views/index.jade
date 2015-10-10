@@ -18,7 +18,7 @@ html
     main(ng-controller='serverListController')
       header
         a(ng-click='addServer()').fa.fa-plus
-        a(ng-click='toggleStatus()').fa.fa-toggle-on
+        a(ng-click='toggleAll()').fa.fa-toggle-on
       section(ng-repeat='server in allServers track by $index')
         .left
           span.title {{ server.name }}

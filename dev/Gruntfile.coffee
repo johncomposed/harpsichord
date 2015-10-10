@@ -70,12 +70,15 @@ module.exports = (grunt) ->
             jade:
                 files: ['src/views/**/*.jade']
                 tasks: 'jade:build'
-            js:
-                files: ['src/js/**/*.js']
-                tasks: 'copy:build'
+            coffee:
+                files: ['src/coffee/**/*.coffee']
+                tasks: 'coffee:build'
             lib:
                 files: ['src/lib/**/*.*']
                 tasks: 'copy:build'
+            app:
+                files: ['build/**/*.*']
+                tasks: 'copy:release'
 
 
     # Load NPM modules
@@ -91,6 +94,8 @@ module.exports = (grunt) ->
     grunt.registerTask 'build', 'default'
     grunt.registerTask 'release', ['build', 'copy:release']
     grunt.registerTask 'serve', ['default', 'watch']
+    grunt.registerTask 'watchapp', ['release', 'watch']
+
     
     
     

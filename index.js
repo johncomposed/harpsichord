@@ -1,10 +1,85 @@
 /* global require, __dirname */
 
 var menubar = require('menubar');
+var forkme = require('forkme');
 
 // note: grunt copied image is broken - why?
 var mb = menubar({ dir: __dirname + '/app', icon:__dirname + '/dark.png', preloadWindow: true, transparent: true, fullscreen: false });
 
+
+
+
+var harpServer = function(serverObject) {
+  console.log("New hs made");
+  
+  this.port = serverObject.port;
+  this.status = serverObject.status;
+  this.dir = serverObject.dir;
+  this.compileDir = serverObject.compileDir;
+  this.name = serverObject.name;
+  this.id = serverObject.id; 
+  
+  //this.logfile = logfilePath;  // TODO
+};
+
+harpServer.prototype.serve = function(){
+  this.server = forkme([this], function(parent) { 
+    // NOTE: Now running in a forked child process
+    var harp = require("harp");
+    
+    harp.server(parent.dir, { port: parent.port }, function (errors){
+      if (errors) {
+        console.log(JSON.stringify(errors, null, 2));
+        process.exit(1);
+      }
+      console.log('Running harp at '+ parent.dir +' on ' + parent.port);
+    });
+    
+    process.on('message', function(m) {
+      var options = {
+        'stop': function() { process.exit(1); },
+        'sayhi': function() { process.send("hi"); }
+      };
+      
+      options[m]();
+      
+    });
+    
+    // Make sure it exits if not connected
+    process.on('disconnect',function() {
+      process.exit();
+    });
+    
+  });
+  
+  // Listen for messages, will later use for logs
+  this.server.on('message', function(m) {
+    // Receive results from child process
+    console.log('received: ' + m);
+  });
+  
+};
+
+
+
+harpServer.prototype.stop = function(){
+  if (this.server.connected) {
+    this.server.send('stop');
+  }
+  
+  this.server.on('exit', function (code, signal) {
+    console.log('Child exited:', code, signal);
+  });
+  
+  
+};
+
+
+
+
+harpServer.prototype.compile = function(){};
+harpServer.prototype.isRunning = function(){};
+harpServer.prototype.update = function(newServerObject){};
 
 
 
@@ -14,32 +89,96 @@ mb.on('ready', function ready () {
   var fs = require("fs");
   var path = require('path');
   var ipc = require('ipc');
-  var data;
   
   var storagePath = path.join(__dirname, "servers.json");
-  var storageFile = fs.readFileSync(storagePath);
-
-  var helloWorldServer = {
-    id: Date.now(),
-    name: "Hello World Server",
-    port: 9000,
-    status: "off",
-    dir: path.join(__dirname, "/app/lib/starter/"),
-    compileDir: ""
-    
+  var saveServers = function(theData) {
+    fs.writeFileSync(storagePath, JSON.stringify(theData, null, 4));
+  };
+  var updateServer = function(updated) {
+    for (var i = 0; i < data.length; i++) {
+      if (data[i].id === updated.id) {
+          data[i] = updated;
+      }
+    }
+    saveServers(data);
+  };
+  var findServer = function(id) {
+    for (var i = 0; i < data.length; i++) {
+      if (data[i].id === id) {
+          return data[i];
+      }
+    }
   };
   
-
+  
+  /////////////////////////
+  // Startup functions
+  var data;
+  var hServers = {};
   
   // Set data to storage file contents 
   // or create storage file if it doesn't exist
-  if (storageFile) {
-    data = JSON.parse(storageFile);
+  if (fs.existsSync(storagePath)) {
+    data = JSON.parse(fs.readFileSync(storagePath));
   } else {
-    data = [helloWorldServer];
-    fs.writeFileSync(storagePath, JSON.stringify(data));
+    data = [];
+    saveServers(data);
   }
  
+  // Load up hserver instances
+  for (var i = 0; i < data.length; i++) {
+    hServers[data[i].id] = new harpServer(data[i]);
+  }
+  
+  
+  
+  
+  
+  
+  
+  /////////////////////////
+  // Listen from frontend
+  
+  // Send list of servers to mb
+  ipc.on('request-servers', function(event, arg) {
+    console.log(arg);
+    event.returnValue =  data;
+  });
+  
+  
+  // Listen for a new server
+  ipc.on('new-server', function(event, server) {
+    hServers[server.id] = new harpServer(server);
+    
+    data.push(server);
+    saveServers(data);
+  });
+  
+  // Listen for server setting changes  
+  ipc.on('edit-server', function(event, server) {
+    updateServer(server);
+  });
+  
+  
+  // Toggle harp server
+  ipc.on('toggle-request', function(event, id) {
+    console.log(id);  // prints "ping"
+    var requested = findServer(id);
+
+    if (requested.status === "on") {
+      requested.status = "off";
+      hServers[id].stop();
+
+    } else {
+      requested.status = "on";
+      hServers[id].serve();
+    }
+    updateServer(requested);
+
+    event.sender.send('toggle-response', id);
+    
+  });
+  
   
   
   
@@ -50,7 +189,7 @@ mb.on('ready', function ready () {
 
 // Listen for window creating functions
 
-//ipc.on('blah', somefunc);
+
 
 
 
@@ -74,7 +213,6 @@ mb.on('ready', function ready () {
 
 
 
-//var harp = require("harp");
 //var dir = __dirname + "/starter";
 //var port = 9000;
 //
@@ -101,3 +239,8 @@ mb.on('ready', function ready () {
 
 //app.close()
 
+
+
+
+
+//event.sender.toggleDevTools();
