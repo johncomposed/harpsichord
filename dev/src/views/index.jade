@@ -8,35 +8,26 @@ html
     link(rel='stylesheet', type='text/css', href='lib/reset.css')
     link(rel='stylesheet', type='text/css', href='css/app.css')
 
-
     // Libraries
-    script(type='text/javascript', src='lib/lib.js')
-
+    script(type='text/javascript', src='lib/angular.min.js')
 
     // Javascript
-    script(type='text/javascript', src='js/app.js')
+    script(type='text/javascript', src='lib/app.js')
     
-  body
-    main
+  body(ng-app="harpsichord")
+    main(ng-controller='serverListController')
       header
-        a(href="#").fa.fa-plus
-        a(href="#").fa.fa-toggle-on
-      section
+        a(ng-click='addServer()').fa.fa-plus
+        a(ng-click='toggleStatus()').fa.fa-toggle-on
+      section(ng-repeat='server in allServers track by $index')
         .left
-          span.title Demo Website
-          a(href="#").port 9999
-          a(href="#").fa.fa-gear
-          a(href="#").fa.fa-list-alt  
+          span.title {{ server.name }}
+          a(ng-click='launchSite(server.port)').port {{ server.port }}
+          a(ng-click='launchSettings(server.id)').fa.fa-gear
+          a(ng-click='launchLogs(server.id)').fa.fa-list-alt  
         .right
-          a(href="#").fa.fa-circle.on
-      section
-        .left
-          span.title Demo Website
-          a(href="#").port 9999
-          a(href="#").fa.fa-gear
-          a(href="#").fa.fa-list-alt  
-        .right
-          a(href="#").fa.fa-circle.off
+          //.on or .off
+          a(ng-click='toggleStatus(server.id)', class='{{ server.status }}').fa.fa-circle 
             
 
         
