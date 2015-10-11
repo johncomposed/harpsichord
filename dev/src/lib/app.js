@@ -2,7 +2,6 @@
 // Man, electron is weird.
 var ipc = require('ipc');
 
-
 // Starting angular app
 var app = angular.module('harpsichord', []);
 
@@ -27,7 +26,7 @@ app.controller('serverListController', function($scope) {
   };
   
   ipc.on('force-update', function(arg) {
-    console.log(arg); 
+    //console.log(arg); 
     updateServerList();
   });
   
@@ -61,6 +60,12 @@ app.controller('serverListController', function($scope) {
   };
   
   _this.launchSettings = function(id) {
+    ipc.send('edit-server', id);
+    
+    
+    
+    
+    
     console.log(id);
     // launch new settings page with settingsController
   };
@@ -77,12 +82,40 @@ app.controller('serverListController', function($scope) {
 // Settings controller
 app.controller('settingsController', function( $scope) {
   
-    var hws2 = helloWorldServer;
-    hws2.id = 1444443802984;
-    hws2.status = "off";
-    ipc.send('edit-server', helloWorldServer);
-    updateServerList();
+  ipc.send('gimme-settings', 'ping');
+
   
+  var _this = $scope;
+  _this.server = {
+    name:'not updated',
+    port:9001,
+    dir:'',
+    compileDir:''
+  };
+  
+  var updateServer = function(server) {
+
+  };
+  
+  ipc.on('load-settings', function(server) {
+    console.log("Got load settings message");
+    $scope.$apply(_this.server = server);
+
+  });
+  
+  
+  
+  _this.saveServer = function() {
+    console.log("clicked ss");
+    ipc.send('update-server', _this.server);    
+    
+  };
+  
+  _this.deleteServer = function() {
+    
+  };
+
+
   
   
 });

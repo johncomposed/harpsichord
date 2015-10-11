@@ -2,6 +2,8 @@
 
 var menubar = require('menubar');
 var forkme = require('forkme');
+var path = require('path');
+
 
 // note: grunt copied image is broken - why?
 var mb = menubar({ dir: __dirname + '/app', icon:__dirname + '/dark.png', preloadWindow: true, transparent: true, fullscreen: false });
@@ -22,7 +24,9 @@ var harpServer = function(serverObject) {
   //this.logfile = logfilePath;  // TODO
 };
 
-harpServer.prototype.serve = function(){
+harpServer.prototype.serve = function(callback){
+  var _this = this;
+  
   this.server = forkme([this], function(parent) { 
     // NOTE: Now running in a forked child process
     var harp = require("harp");
@@ -33,6 +37,7 @@ harpServer.prototype.serve = function(){
         process.exit(1);
       }
       console.log('Running harp at '+ parent.dir +' on ' + parent.port);
+      process.send("running");
     });
     
     process.on('message', function(m) {
@@ -41,8 +46,11 @@ harpServer.prototype.serve = function(){
         'sayhi': function() { process.send("hi"); }
       };
       
-      options[m]();
-      
+      if (options[m]) {
+        options[m]();
+      } else {
+        console.log(m);
+      }      
     });
     
     // Make sure it exits if not connected
@@ -54,32 +62,74 @@ harpServer.prototype.serve = function(){
   
   // Listen for messages, will later use for logs
   this.server.on('message', function(m) {
-    // Receive results from child process
-    console.log('received: ' + m);
+    var options = {
+      'running': function() { _this.status = "on"; if (callback) { callback(); } }
+    };
+
+    if (options[m]) {
+      options[m]();
+    } else {
+      console.log(m);
+    }
   });
   
 };
 
 
 
-harpServer.prototype.stop = function(){
-  if (this.server.connected) {
+harpServer.prototype.stop = function(callback){
+  var _this = this;
+  if (this.server && this.server.connected) {
     this.server.send('stop');
+  } else {
+    console.log("tried to stop "+ this.id + " when no harp server running");
+    this.status = "off";
+    if (callback) { callback(); }
   }
   
   this.server.on('exit', function (code, signal) {
+    _this.status = "off";
+    if (callback) { callback(); }
     console.log('Child exited:', code, signal);
+
   });
-  
-  
 };
 
-
-
+harpServer.prototype.serverObject = function() {
+    var serverObj = {};
+    serverObj.port = this.port;
+    serverObj.status = this.status;
+    serverObj.dir = this.dir;
+    serverObj.compileDir = this.compileDir;
+    serverObj.name = this.name;
+    serverObj.id = this.id; 
+  
+    return serverObj;
+};
 
 harpServer.prototype.compile = function(){};
 harpServer.prototype.isRunning = function(){};
-harpServer.prototype.update = function(newServerObject){};
+
+harpServer.prototype.update = function(newServerObject) {
+  var _this = this;
+  if (this.status === 'on') {
+    this.stop();
+    this.server.on('exit', function (code, signal) {
+      _this.port = newServerObject.port;
+      _this.dir = newServerObject.dir;
+      _this.compileDir = newServerObject.compileDir;
+      _this.name = newServerObject.name;
+      _this.serve();
+    });
+    
+    
+  } else {
+    this.port = newServerObject.port;
+    this.dir = newServerObject.dir;
+    this.compileDir = newServerObject.compileDir;
+    this.name = newServerObject.name;
+  }
+};
 
 
 
@@ -89,52 +139,104 @@ mb.on('ready', function ready () {
   var fs = require("fs");
   var path = require('path');
   var ipc = require('ipc');
-  
+  var BrowserWindow = require('browser-window');
   var storagePath = path.join(__dirname, "servers.json");
-  var saveServers = function(theData) {
-    fs.writeFileSync(storagePath, JSON.stringify(theData, null, 4));
-  };
-  var updateServer = function(updated) {
-    for (var i = 0; i < data.length; i++) {
-      if (data[i].id === updated.id) {
-          data[i] = updated;
+  
+
+  
+  /////////////////////////
+  // harpServers object functions
+  var harpServers = function(storagePath) { 
+    var _this = this;
+
+    // Object containing all harp server instances
+    // Private so nothing interacts with it directly
+    var harpServers = {};
+    
+    // Load up saved data or create storage file if it doesn't exist
+    if (fs.existsSync(storagePath)) {
+      var saveData = JSON.parse(fs.readFileSync(storagePath));
+      // Load up harp servers
+      for (var i = 0; i < saveData.length; i++) {
+        harpServers[saveData[i].id] = new harpServer(saveData[i]);
       }
+      console.log("Harp servers found and loaded up");
+    } else {
+      fs.writeFileSync(storagePath, JSON.stringify([], null, 4));
     }
-    saveServers(data);
-  };
-  var findServer = function(id) {
-    for (var i = 0; i < data.length; i++) {
-      if (data[i].id === id) {
-          return data[i];
+    
+    // Start up any harp servers with status on 
+    for (var key in harpServers) {
+      if (harpServers[key].status === "on") {
+        harpServers[key].serve();
+        console.log("Started up " + harpServers[key].name);
       }
-    }
+    } 
+    
+    
+    // Public Functions
+    // New Server
+    this.new = function(serverObject){
+      harpServers[serverObject.id] = new harpServer(serverObject);
+      this.save();
+    };
+    
+    // Update Server
+    this.update = function(serverObject) {
+      harpServers[serverObject.id].update(serverObject);
+      this.save();
+    };
+
+    // Delete Server
+    this.delete = function(id) {
+      harpServers[id].stop();
+      delete harpServers[id];
+      this.save();
+    };
+    
+    // Start or stop a server
+    this.toggle = function(id, callback) {
+      if (harpServers[id].status === "on") {
+        harpServers[id].stop(function () {
+          console.log(harpServers[id].name + " stopped");
+          _this.save();
+          callback();
+        });
+      } else {
+        harpServers[id].serve(function () {
+          _this.save();
+          callback();
+        });
+      }
+    };
+    
+    // Find and return serverObject
+    this.findSO = function(id) {
+      return harpServers[id].serverObject();
+    };
+    
+    // Find and return all server objects
+    this.findAllSO = function() {
+      var allSO = [];
+      for (var key in harpServers) {      
+        allSO.push(harpServers[key].serverObject());
+      } 
+      return allSO;
+    };
+    
+    // Save all server objects.
+    this.save = function() {
+      fs.writeFileSync(storagePath, JSON.stringify(this.findAllSO(), null, 4));  
+    }; 
+    
   };
   
   
   /////////////////////////
-  // Startup functions
-  var data;
-  var hServers = {};
-  
-  // Set data to storage file contents 
-  // or create storage file if it doesn't exist
-  if (fs.existsSync(storagePath)) {
-    data = JSON.parse(fs.readFileSync(storagePath));
-  } else {
-    data = [];
-    saveServers(data);
-  }
- 
-  // Load up hserver instances
-  for (var i = 0; i < data.length; i++) {
-    hServers[data[i].id] = new harpServer(data[i]);
-  }
-  
-  
-  
-  
-  
-  
+  // Startup function  
+  var serverData = new harpServers(storagePath);
+
+
   
   /////////////////////////
   // Listen from frontend
@@ -142,40 +244,44 @@ mb.on('ready', function ready () {
   // Send list of servers to mb
   ipc.on('request-servers', function(event, arg) {
     console.log(arg);
-    event.returnValue =  data;
+    event.returnValue = serverData.findAllSO();
   });
-  
   
   // Listen for a new server
   ipc.on('new-server', function(event, server) {
-    hServers[server.id] = new harpServer(server);
-    
-    data.push(server);
-    saveServers(data);
+    serverData.new(server);
   });
   
   // Listen for server setting changes  
-  ipc.on('edit-server', function(event, server) {
-    updateServer(server);
+  ipc.on('edit-server', function(event, id) {
+    var win = new BrowserWindow({
+       "width": 400,
+       "height": 600
+    });
+    win.loadUrl('file://' + __dirname + '/app/settings.html');
+    console.log("Sending:");  
+    win.show();
+    //win.openDevTools();
+    
+    ipc.on('gimme-settings', function(event, arg) {
+      win.webContents.send('load-settings', serverData.findSO(id));
+    });
   });
   
+  // Listen for an updated server
+  ipc.on('update-server', function(event, server) {
+    console.log("update server received");
+    serverData.update(server);
+    mb.window.webContents.send('force-update', 'ping');
+    
+  });  
   
   // Toggle harp server
   ipc.on('toggle-request', function(event, id) {
-    console.log(id);  // prints "ping"
-    var requested = findServer(id);
-
-    if (requested.status === "on") {
-      requested.status = "off";
-      hServers[id].stop();
-
-    } else {
-      requested.status = "on";
-      hServers[id].serve();
-    }
-    updateServer(requested);
-
-    event.sender.send('toggle-response', id);
+    serverData.toggle(id, function () {
+      console.log(serverData.findAllSO());
+      event.sender.send('toggle-response', id);
+    });
     
   });
   
