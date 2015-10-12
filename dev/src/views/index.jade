@@ -3,7 +3,7 @@ html
   head
     title Mockup
     // Styles
-    link(href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css")
+    link(href="http://fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css")
     link(rel="stylesheet", href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css")
     link(rel='stylesheet', type='text/css', href='lib/reset.css')
     link(rel='stylesheet', type='text/css', href='css/app.css')
@@ -14,20 +14,36 @@ html
     // Javascript
     script(type='text/javascript', src='lib/app.js')
     
-  body(ng-app="harpsichord")
-    main(ng-controller='serverListController')
-      header
-        a(ng-click='addServer()').fa.fa-plus
-        a(ng-click='toggleAll()').fa.fa-toggle-on
+  body(ng-app="harpsichord", ng-controller='serverListController')
+    header.row
+      a(ng-click='addServer()').fa.fa-plus
+      a.fa(ng-click='toggleQuietMode()', ng-class="quietMode ? 'fa-minus-circle' : 'fa-check-circle' ")
+    main(style="height:{{ innerHeight }}px")
       section(ng-repeat='server in allServers track by $index')
-        .left
-          span.title {{ server.name }}
-          a(ng-click='launchSite(server.port)').port {{ server.port }}
-          a(ng-click='launchSettings(server.id)').fa.fa-gear
-          a(ng-click='launchLogs(server.id)').fa.fa-list-alt  
-        .right
-          //.on or .off
-          a(ng-click='toggleStatus(server.id)', class='{{ server.status }}').fa.fa-circle 
-            
+        .row
+          .left
+            span.title {{ server.name }}
+            a(ng-click='launchSite(server.port)').port-box {{ server.port }}
+            a(ng-click='toggleSettings(server)').fa.fa-gear
+            a(ng-click='launchLogs(server.id)').fa.fa-list-alt  
+          .right
+            //.on or .off
+            a(ng-click='toggleStatus(server.id)', class='{{ server.status }}').fa.fa-circle 
+        .settings(ng-show="server.settings")
+          .row
+            .name
+              label(for='name') Name
+              input#name(ng-model="server.name", type='text')
+            .port
+              label(for='port') Port
+              input#port(ng-model="server.port", min="8000", max="9999", maxlength='4', type='number')
+          .setting
+            label(for='dir') Directory
+            input#dir(ng-model="server.dir", type='text')
+          .setting
+            label(for='cdir') Compile Directory
+            input#cdir(ng-model="server.compileDir", type='text')
+          .del-row
+            a.del(ng-click="delete(server.id)") Delete server
 
         

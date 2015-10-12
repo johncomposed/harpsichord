@@ -9,31 +9,48 @@ var app = angular.module('harpsichord', []);
 app.controller('serverListController', function($scope) {
 
   var _this = $scope;
+  
+  // Shitty hack for now
+  $scope.$watch(function(){
+      return window.innerHeight;
+    }, function(value) { 
+      _this.innerHeight = value - 50; 
+  });
+
+  _this.showSettings = {};
+  _this.quietMode = false;
+  
   var helloWorldServer = {
     id: +new Date(),
-    name: "Hello World Server",
+    name: "New Server",
     port: 9000,
     dir: "/Users/john/Github/autoHarp/harpsichord/app/lib/starter/",
     status: "off",
+    settings: true,
     compileDir: ""
   };
-
+  
   var updateServerList = function() {
     console.log('updated');
-    $scope.$apply(
-      _this.allServers = ipc.sendSync('request-servers', 'update pls')
-    );
+    _this.allServers = ipc.sendSync('request-servers', 'update pls');
   };
   
-  ipc.on('force-update', function(arg) {
-    //console.log(arg); 
-    updateServerList();
+  var toggleServing = function(id, callback) {
+    ipc.send('toggle-request', id);
+
+    ipc.on('toggle-response', function() {
+      if (callback) { callback(); }
+    });
+    
+  };
+  
+  
+  
+  ipc.on('force-update', function(message) {
+    console.log(message); 
+    $scope.$apply(updateServerList());
   });
   
-  ipc.on('toggle-response', function(id) {
-    // stopSpinning(id); //TODO
-    updateServerList();
-  });
   
   _this.allServers = ipc.sendSync('request-servers', 'first run');
     
@@ -44,34 +61,47 @@ app.controller('serverListController', function($scope) {
   };
   
   _this.toggleStatus = function(id) {
-    ipc.send('toggle-request', id);
     // startSpinning(id); // TODO
+    if (!_this.quietMode) {
+      toggleServing(id, function(){
+        // stopSpinning(id); //TODO
+        $scope.$apply(updateServerList());    
+      });
+    }    
   };
   
-  _this.toggleAll = function() {
-    console.log("toggleall");
-    for (var i = 0; i < _this.allServers.length; i++) {
-      _this.toggleStatus(_this.allServers[i].id);
+  _this.toggleQuietMode = function() {
+    if (!_this.quietMode) {
+      for (var i = 0; i < _this.allServers.length; i++) {
+        if (_this.allServers[i].status === "on") {
+          _this.toggleStatus(_this.allServers[i].id);
+        }    
+      }
+      _this.quietMode = true;
+    } else {
+      _this.quietMode = false;
     }
   };
   
   _this.launchSite = function(port) {
-    console.log(port);
+    ipc.send('open-url', port);
   };
   
-  _this.launchSettings = function(id) {
-    ipc.send('edit-server', id);
+  _this.toggleSettings = function(server) {
     
+    if (!server.settings) {
+      server.settings = true;
+    } else {
+      server.settings = false;
+      ipc.send('update-server', server);
+    }
+
     
-    
-    
-    
-    console.log(id);
     // launch new settings page with settingsController
   };
   
   _this.launchLogs = function(id) {
-    console.log(id);
+    ipc.send('launch-logs', id);
   };
   
   
@@ -80,40 +110,33 @@ app.controller('serverListController', function($scope) {
 
 
 // Settings controller
-app.controller('settingsController', function( $scope) {
-  
-  ipc.send('gimme-settings', 'ping');
-
-  
+app.controller('logsController', function( $scope) {
   var _this = $scope;
-  _this.server = {
-    name:'not updated',
-    port:9001,
-    dir:'',
-    compileDir:''
-  };
   
-  var updateServer = function(server) {
+  ipc.send('gimme-logs', 'ping');
 
+  
+  _this.logFile = {
+    id: 0,
+    logs: ""
   };
   
-  ipc.on('load-settings', function(server) {
+
+  
+  ipc.on('load-logs', function(logFile) {
     console.log("Got load settings message");
-    $scope.$apply(_this.server = server);
+    $scope.$apply(_this.logFile = logFile);
 
   });
   
   
   
-  _this.saveServer = function() {
-    console.log("clicked ss");
-    ipc.send('update-server', _this.server);    
+  _this.deleteLogs = function() {
+    ipc.send('delete-logs', _this.logFile.id);    
     
   };
   
-  _this.deleteServer = function() {
-    
-  };
+
 
 
   

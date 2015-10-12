@@ -96,30 +96,29 @@ harpServer.prototype.stop = function(callback){
 };
 
 harpServer.prototype.serverObject = function() {
-    var serverObj = {};
-    serverObj.port = this.port;
-    serverObj.status = this.status;
-    serverObj.dir = this.dir;
-    serverObj.compileDir = this.compileDir;
-    serverObj.name = this.name;
-    serverObj.id = this.id; 
-  
-    return serverObj;
+  var serverObj = {};
+  serverObj.port = this.port;
+  serverObj.status = this.status;
+  serverObj.dir = this.dir;
+  serverObj.compileDir = this.compileDir;
+  serverObj.name = this.name;
+  serverObj.id = this.id; 
+
+  return serverObj;
 };
 
 harpServer.prototype.compile = function(){};
 harpServer.prototype.isRunning = function(){};
 
-harpServer.prototype.update = function(newServerObject) {
+harpServer.prototype.update = function(newServerObject, callback) {
   var _this = this;
   if (this.status === 'on') {
-    this.stop();
-    this.server.on('exit', function (code, signal) {
+    this.stop(function(){
       _this.port = newServerObject.port;
       _this.dir = newServerObject.dir;
       _this.compileDir = newServerObject.compileDir;
       _this.name = newServerObject.name;
-      _this.serve();
+      _this.serve(function(){ callback(); });
     });
     
     
@@ -128,6 +127,7 @@ harpServer.prototype.update = function(newServerObject) {
     this.dir = newServerObject.dir;
     this.compileDir = newServerObject.compileDir;
     this.name = newServerObject.name;
+    callback();
   }
 };
 
@@ -139,6 +139,7 @@ mb.on('ready', function ready () {
   var fs = require("fs");
   var path = require('path');
   var ipc = require('ipc');
+  var shell = require('shell');
   var BrowserWindow = require('browser-window');
   var storagePath = path.join(__dirname, "servers.json");
   
@@ -182,9 +183,11 @@ mb.on('ready', function ready () {
     };
     
     // Update Server
-    this.update = function(serverObject) {
-      harpServers[serverObject.id].update(serverObject);
-      this.save();
+    this.update = function(serverObject,callback) {
+      harpServers[serverObject.id].update(serverObject, function(){
+        _this.save();
+        callback();
+      });
     };
 
     // Delete Server
@@ -241,7 +244,7 @@ mb.on('ready', function ready () {
   /////////////////////////
   // Listen from frontend
   
-  // Send list of servers to mb
+  // Send list of servers to mb on request
   ipc.on('request-servers', function(event, arg) {
     console.log(arg);
     event.returnValue = serverData.findAllSO();
@@ -252,31 +255,17 @@ mb.on('ready', function ready () {
     serverData.new(server);
   });
   
-  // Listen for server setting changes  
-  ipc.on('edit-server', function(event, id) {
-    var win = new BrowserWindow({
-       "width": 400,
-       "height": 600
-    });
-    win.loadUrl('file://' + __dirname + '/app/settings.html');
-    console.log("Sending:");  
-    win.show();
-    //win.openDevTools();
-    
-    ipc.on('gimme-settings', function(event, arg) {
-      win.webContents.send('load-settings', serverData.findSO(id));
-    });
-  });
-  
   // Listen for an updated server
   ipc.on('update-server', function(event, server) {
     console.log("update server received");
-    serverData.update(server);
-    mb.window.webContents.send('force-update', 'ping');
-    
-  });  
+    console.log("server is "+server.status);
+    serverData.update(server, function() {
+      console.log("callback done?");
+      mb.window.webContents.send('force-update', 'callback done?');
+    });
+  });    
   
-  // Toggle harp server
+  // Listen for toggle harp server request
   ipc.on('toggle-request', function(event, id) {
     serverData.toggle(id, function () {
       console.log(serverData.findAllSO());
@@ -285,7 +274,32 @@ mb.on('ready', function ready () {
     
   });
   
+  // Open a requested port 
+  ipc.on('open-url', function(event, port) {
+    shell.openExternal("http://localhost:" + port);
+  });
   
+  
+  // Launch a logs window
+  ipc.on('launch-logs', function(event, id) {
+    var win = new BrowserWindow({
+       "width": 300,
+       "height": 400
+    });
+    win.loadUrl(path.join('file://', __dirname,'/app/logs.html'));
+    console.log("Sending:");  
+    win.show();
+    //win.openDevTools();
+    
+    ipc.on('gimme-logs', function(event, arg) {
+      var dummyLogFile = {
+        id: id,
+        logs: "TO BE OR NOT TO BE"
+      };
+      
+      win.webContents.send('load-logs', dummyLogFile);
+    });
+  });
   
   
   

@@ -1,0 +1,21 @@
+doctype
+html
+  head
+    title Logs
+    // Styles
+    link(href="http://fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css")
+    link(rel="stylesheet", href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css")
+    link(rel='stylesheet', type='text/css', href='lib/reset.css')
+    link(rel='stylesheet', type='text/css', href='css/app.css')
+
+    // Libraries
+    script(type='text/javascript', src='lib/angular.min.js')
+
+    // Javascript
+    script(type='text/javascript', src='lib/app.js')
+
+    
+  body.logs(ng-app="harpsichord", ng-controller='logsController')
+    pre {{logFile.logs}}
+    a(ng-click="deleteLogs()") clear logs
+    
