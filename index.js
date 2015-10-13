@@ -78,18 +78,19 @@ harpServer.prototype.stop = function(callback){
   var _this = this;
   if (this.server && this.server.connected) {
     this.server.send('stop');
+    
+    this.server.on('exit', function (code, signal) {
+      _this.status = "off";
+      if (callback) { callback(); }
+      console.log('Child exited:', code, signal);
+
+    });
   } else {
     console.log("tried to stop "+ this.id + " when no harp server running");
     this.status = "off";
     if (callback) { callback(); }
   }
   
-  this.server.on('exit', function (code, signal) {
-    _this.status = "off";
-    if (callback) { callback(); }
-    console.log('Child exited:', code, signal);
-
-  });
 };
 
 harpServer.prototype.compile = function(callback){
@@ -234,7 +235,6 @@ mb.on('ready', function ready () {
       });
     };
     
-    
     // Find and return serverObject
     this.findSO = function(id) {
       return harpServers[id].serverObject();
@@ -276,14 +276,21 @@ mb.on('ready', function ready () {
   ipc.on('new-server', function(event, server) {
     serverData.new(server);
   });
+
+  // Delete server
+  ipc.on('delete-server', function(event, id) {
+    serverData.delete(id);
+    mb.window.webContents.send('force-update', 'callback');
+  });
+  
   
   // Listen for an updated server
   ipc.on('update-server', function(event, server) {
     console.log("update server received");
     console.log("server is "+server.status);
     serverData.update(server, function() {
-      console.log("callback done?");
-      mb.window.webContents.send('force-update', 'callback done?');
+      console.log("Updated server");
+      mb.window.webContents.send('force-update', 'callback');
     });
   });    
   

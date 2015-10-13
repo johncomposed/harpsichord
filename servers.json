@@ -1,7 +1,7 @@
 [
     {
         "port": 9019,
-        "status": "on",
+        "status": "off",
         "dir": "/Users/john/Github/autoHarp/harpsichord/app/lib/starter/",
         "compileDir": "",
         "name": "Hello Worr",
@@ -14,13 +14,5 @@
         "compileDir": "",
         "name": "Hello World Server",
         "id": 1444501302512
-    },
-    {
-        "port": 9000,
-        "status": "off",
-        "dir": "/Users/john/Github/autoHarp/harpsichord/app/lib/starter/",
-        "compileDir": "",
-        "name": "Hello World Server",
-        "id": 1444544580551
     }
 ]

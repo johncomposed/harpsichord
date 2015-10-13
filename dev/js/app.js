@@ -48,6 +48,10 @@ app.controller('serverListController', function($scope) {
     updateServerList();
   };
   
+  _this.deleteServer = function(id) {
+    ipc.send('delete-server', id);
+  };
+  
   _this.toggleStatus = function(id) {
     // startSpinning(id); // TODO
     if (!_this.quietMode) {
