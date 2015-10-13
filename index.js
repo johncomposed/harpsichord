@@ -74,8 +74,6 @@ harpServer.prototype.serve = function(callback){
   
 };
 
-
-
 harpServer.prototype.stop = function(callback){
   var _this = this;
   if (this.server && this.server.connected) {
@@ -94,6 +92,26 @@ harpServer.prototype.stop = function(callback){
   });
 };
 
+harpServer.prototype.compile = function(callback){
+  var _this = this;
+  var harp = require("harp");
+
+  if (this.compileDir) {
+    harp.compile(this.dir, this.compileDir, function(errors, output){
+      console.log(output, errors);
+
+      if (callback) { callback(); }
+    });
+  } else {
+    console.log("error, no compiledir");
+  }
+  
+
+  
+  
+};
+
+
 harpServer.prototype.serverObject = function() {
   var serverObj = {};
   serverObj.port = this.port;
@@ -105,9 +123,6 @@ harpServer.prototype.serverObject = function() {
 
   return serverObj;
 };
-
-harpServer.prototype.compile = function(){};
-harpServer.prototype.isRunning = function(){};
 
 harpServer.prototype.update = function(newServerObject, callback) {
   var _this = this;
@@ -212,6 +227,14 @@ mb.on('ready', function ready () {
       }
     };
     
+    // Compile a site
+    this.compile = function(id, callback) {
+      harpServers[id].compile(function(){
+        if (callback) { callback(); }
+      });
+    };
+    
+    
     // Find and return serverObject
     this.findSO = function(id) {
       return harpServers[id].serverObject();
@@ -272,6 +295,14 @@ mb.on('ready', function ready () {
     });
     
   });
+  
+  // Compile a server
+  ipc.on('compile-site', function(event, id) {
+    serverData.compile(id, function() {
+      console.log("Compiled!");
+    });
+  });
+  
   
   // Open a requested port 
   ipc.on('open-url', function(event, port) {
