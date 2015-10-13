@@ -21,7 +21,6 @@ var harpServer = function(serverObject) {
   this.name = serverObject.name;
   this.id = serverObject.id; 
   
-  //this.logfile = logfilePath;  // TODO
 };
 
 harpServer.prototype.serve = function(callback){
@@ -75,8 +74,6 @@ harpServer.prototype.serve = function(callback){
   
 };
 
-
-
 harpServer.prototype.stop = function(callback){
   var _this = this;
   if (this.server && this.server.connected) {
@@ -95,6 +92,26 @@ harpServer.prototype.stop = function(callback){
   });
 };
 
+harpServer.prototype.compile = function(callback){
+  var _this = this;
+  var harp = require("harp");
+
+  if (this.compileDir) {
+    harp.compile(this.dir, this.compileDir, function(errors, output){
+      console.log(output, errors);
+
+      if (callback) { callback(); }
+    });
+  } else {
+    console.log("error, no compiledir");
+  }
+  
+
+  
+  
+};
+
+
 harpServer.prototype.serverObject = function() {
   var serverObj = {};
   serverObj.port = this.port;
@@ -106,9 +123,6 @@ harpServer.prototype.serverObject = function() {
 
   return serverObj;
 };
-
-harpServer.prototype.compile = function(){};
-harpServer.prototype.isRunning = function(){};
 
 harpServer.prototype.update = function(newServerObject, callback) {
   var _this = this;
@@ -213,6 +227,14 @@ mb.on('ready', function ready () {
       }
     };
     
+    // Compile a site
+    this.compile = function(id, callback) {
+      harpServers[id].compile(function(){
+        if (callback) { callback(); }
+      });
+    };
+    
+    
     // Find and return serverObject
     this.findSO = function(id) {
       return harpServers[id].serverObject();
@@ -274,90 +296,23 @@ mb.on('ready', function ready () {
     
   });
   
+  // Compile a server
+  ipc.on('compile-site', function(event, id) {
+    serverData.compile(id, function() {
+      console.log("Compiled!");
+    });
+  });
+  
+  
   // Open a requested port 
   ipc.on('open-url', function(event, port) {
     shell.openExternal("http://localhost:" + port);
   });
   
   
-  // Launch a logs window
-  ipc.on('launch-logs', function(event, id) {
-    var win = new BrowserWindow({
-       "width": 300,
-       "height": 400
-    });
-    win.loadUrl(path.join('file://', __dirname,'/app/logs.html'));
-    console.log("Sending:");  
-    win.show();
-    //win.openDevTools();
-    
-    ipc.on('gimme-logs', function(event, arg) {
-      var dummyLogFile = {
-        id: id,
-        logs: "TO BE OR NOT TO BE"
-      };
-      
-      win.webContents.send('load-logs', dummyLogFile);
-    });
-  });
-  
-  
   
 });
 
-
-
-// Listen for window creating functions
-
-
-
-
-
-
-// Listen for window creating functions
-  // server settings
-    // make window
-    // pass settings if exists
-  // show logs 
-    // make window 
-    // pass logs
-
-// listen for saving/updating a server
-  // if it doesn't exist, add a new record with uuid
-  // send updated status to menubar
-
-
-// Start/stop a harp server
-  // pretty much just run it from the settings file passed in
-  // if no uuid log file exists start that up then send it the logs
-
-
-
-//var dir = __dirname + "/starter";
-//var port = 9000;
-//
-//harp.server(dir, { port: port }, function (errors){
-//  if (errors) {
-//    console.log(JSON.stringify(errors, null, 2));
-//    process.exit(1);
-//  }
-//
-//  console.log('Running harp at '+ dir +' on ' + port)
-//});
-
-
-
-//var express = require("express");
-//var harp = require("harp");
-//var app = express();
-//
-//app.use(express.static(__dirname + "/public"));
-//app.use(harp.mount(__dirname + "/public"));
-//
-//app.listen(9000);
-
-
-//app.close()
 
 
 
