@@ -99,46 +99,8 @@ app.controller('serverListController', function($scope) {
     
     // launch new settings page with settingsController
   };
-  
-  _this.launchLogs = function(id) {
-    ipc.send('launch-logs', id);
-  };
-  
-  
-});
-
-
-
-// Settings controller
-app.controller('logsController', function( $scope) {
-  var _this = $scope;
-  
-  ipc.send('gimme-logs', 'ping');
-
-  
-  _this.logFile = {
-    id: 0,
-    logs: ""
-  };
-  
-
-  
-  ipc.on('load-logs', function(logFile) {
-    console.log("Got load settings message");
-    $scope.$apply(_this.logFile = logFile);
-
-  });
-  
-  
-  
-  _this.deleteLogs = function() {
-    ipc.send('delete-logs', _this.logFile.id);    
-    
-  };
-  
-
-
 
   
   
 });
+
