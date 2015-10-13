@@ -2,44 +2,34 @@
 module.exports = (grunt) ->
     grunt.initConfig
         meta:
-            version: '0.1.0',
+            version: '1.0.0',
         clean:
-            build:   ['build']
-            release: ['../app']
+            build:   ['app']
         copy:
             build:
                 options:
                     punctuation: ''
                 files: [
                     {
-                      cwd: 'src/lib/',
+                      cwd: 'dev/lib/',
                       src: ['**/*.*'],
-                      dest: 'build/lib/',
+                      dest: 'app/lib/',
                       expand: true
                     }
                     {
-                      cwd: 'src/js/'
+                      cwd: 'dev/js/'
                       src: ['**/*.*']
-                      dest: 'build/js/' 
+                      dest: 'app/js/' 
                       expand: true
                     }
-                ]
-            release:
-                options:
-                    punctuation: ''
-                files: [
-                    cwd: 'build/'
-                    src: ['**/*.*', '*.*', '**/**/*.*']
-                    dest: '../app/' 
-                    expand: true
                 ]
         jade:
             build:
                 options:
                     pretty: true
-                files: grunt.file.expandMapping(["src/views/**/*.jade"], "build",
+                files: grunt.file.expandMapping(["dev/views/**/*.jade"], "app",
                     rename: (destBase, destPath) ->
-                        destBase + destPath.replace(/src\/views/, '').replace(/\.jade$/, ".html")
+                        destBase + destPath.replace(/dev\/views/, '').replace(/\.jade$/, ".html")
                 )
         stylus:
             build:
@@ -47,27 +37,24 @@ module.exports = (grunt) ->
                     compress: false
                 files:[
                     expand: true,
-                    cwd: 'src/styl/',
+                    cwd: 'dev/styl/',
                     src: ['**/[^_]*.styl'],
-                    dest: 'build/css/',
+                    dest: 'app/css/',
                     ext: '.css'
                 ]
         watch:
             styl:
-                files: ['src/styl/**/*.styl']
+                files: ['dev/styl/**/*.styl']
                 tasks: 'stylus:build'
             jade:
-                files: ['src/views/**/*.jade']
+                files: ['dev/views/**/*.jade']
                 tasks: 'jade:build'
             js:
-                files: ['src/js/**/*.js']
+                files: ['dev/js/**/*.js']
                 tasks: 'copy:build'
             lib:
-                files: ['src/lib/**/*.*']
+                files: ['dev/lib/**/*.*']
                 tasks: 'copy:build'
-            app:
-                files: ['build/**/*.*']
-                tasks: 'copy:release'
 
 
     # Load NPM modules
@@ -80,9 +67,7 @@ module.exports = (grunt) ->
     # Default task.
     grunt.registerTask 'default', ['clean:build','copy:build', 'jade:build', 'stylus:build']
     grunt.registerTask 'build', 'default'
-    grunt.registerTask 'release', ['build', 'copy:release']
-    grunt.registerTask 'serve', ['default', 'watch']
-    grunt.registerTask 'watchapp', ['release', 'watch']
+    grunt.registerTask 'compile', ['default', 'watch']
 
     
     
