@@ -1,7 +1,7 @@
 [
     {
         "port": 9019,
-        "status": "off",
+        "status": "on",
         "dir": "/Users/john/Github/autoHarp/harpsichord/app/lib/starter/",
         "compileDir": "",
         "name": "Hello Worr",
