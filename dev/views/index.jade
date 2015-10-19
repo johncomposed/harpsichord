@@ -3,7 +3,6 @@ html
   head
     title Main
     // Styles
-    link(href="http://fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css")
     link(rel="stylesheet", href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css")
     link(rel='stylesheet', type='text/css', href='lib/reset.css')
     link(rel='stylesheet', type='text/css', href='css/app.css')
@@ -17,8 +16,8 @@ html
   body(ng-app="harpsichord", ng-controller='serverListController')
     header.row
       a(ng-click='addServer()').fa.fa-plus
-      a.fa(ng-click='toggleQuietMode()', ng-class="quietMode ? 'fa-minus-circle' : 'fa-check-circle' ")
-    main(style="height:{{ innerHeight }}px")
+      a.fa(ng-click='toggleQuietMode()', ng-class="quietMode ? 'fa-times' : 'fa-check-circle' ")
+    main
       section(ng-repeat='server in allServers track by $index')
         .row
           .left
@@ -28,7 +27,7 @@ html
             a(ng-show="server.compileDir", ng-click='compileSite(server.id)').fa.fa-arrow-circle-down
           .right
             //.on or .off
-            a(ng-click='toggleStatus(server.id)', class='{{ server.status }}').fa.fa-circle 
+            a(ng-click='toggleStatus(server.id)', ng-class="quietMode ? 'fa-times-circle' : 'fa-circle' ", class='{{ server.status }}').fa 
         .settings(ng-show="server.settings")
           .row
             .name

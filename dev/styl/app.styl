@@ -1,6 +1,10 @@
+html
+  overflow hidden
+  height 100%
+  -webkit-user-select none
+
 body 
   font menu
-  //font-family "-apple-system", "-apple-system-font", "-webkit-system-font", "Raleway"
   overflow-y hidden
   background-color #F7F7F7
 
@@ -17,8 +21,11 @@ a
   align-content center
 
 header
+  background-image linear-gradient(#464646, #252525)
+  text-shadow -1px -1px 1px #111, 2px 2px 1px #383636
+  font-size 16px
   a
-    color #fff
+    color #000000
 
 main
   
@@ -31,14 +38,14 @@ section
   a
     margin-left 5px
     
+  .row 
+    padding 2px 10px
+    
   .port-box
     font-size 11px
     padding 2px
     background-color #ADADAD
     border-radius 2px 
-
-  .right,.left 
-    display inline-block
 
   .on
     color #3A753A
@@ -49,7 +56,8 @@ section
 
     
 .settings 
-  background #9E9E9E
+  background-image linear-gradient(#9e9e9e, #909090)
+  box-shadow inset 0px 10px 20px 0px #A5A2A2
   padding 10px 30px 10px 10px
   
   label 
@@ -77,7 +85,7 @@ section
     margin-top 8px
     
   .name 
-    width 75%
+    width 65%
     
   .del-row 
     margin-top 20px

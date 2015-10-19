@@ -54,7 +54,7 @@ app.controller('serverListController', function($scope) {
       ipc.send('toggle-request', id);
       
       ipc.on('toggle-response', function() {
-        ipc.send('update-request', "Go!");
+        ipc.send('update-request', "Toggle " + id);
       });
     }    
   };
