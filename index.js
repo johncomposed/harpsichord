@@ -6,11 +6,10 @@ var path = require('path');
 
 
 // note: grunt copied image is broken - why?
-var mb = menubar({ dir: __dirname + '/app', icon:__dirname + '/dark.png', preloadWindow: true, transparent: true, fullscreen: false });
+var mb = menubar({ dir: __dirname + '/app', icon:__dirname + '/dark.png', preloadWindow: true, width:250, fullscreen: false });
 
 
-
-
+// Create harpServer object
 var harpServer = function(serverObject) {
   console.log("New hs made");
   
@@ -19,6 +18,7 @@ var harpServer = function(serverObject) {
   this.dir = serverObject.dir;
   this.compileDir = serverObject.compileDir;
   this.name = serverObject.name;
+  this.settings = serverObject.settings;
   this.id = serverObject.id; 
   
 };
@@ -112,12 +112,12 @@ harpServer.prototype.compile = function(callback){
   
 };
 
-
 harpServer.prototype.serverObject = function() {
   var serverObj = {};
   serverObj.port = this.port;
   serverObj.status = this.status;
   serverObj.dir = this.dir;
+  serverObj.settings = this.settings;
   serverObj.compileDir = this.compileDir;
   serverObj.name = this.name;
   serverObj.id = this.id; 
@@ -132,7 +132,9 @@ harpServer.prototype.update = function(newServerObject, callback) {
       _this.port = newServerObject.port;
       _this.dir = newServerObject.dir;
       _this.compileDir = newServerObject.compileDir;
+      _this.settings = newServerObject.settings;
       _this.name = newServerObject.name;
+
       _this.serve(function(){ callback(); });
     });
     
@@ -141,6 +143,7 @@ harpServer.prototype.update = function(newServerObject, callback) {
     this.port = newServerObject.port;
     this.dir = newServerObject.dir;
     this.compileDir = newServerObject.compileDir;
+    this.settings = newServerObject.settings;
     this.name = newServerObject.name;
     callback();
   }
@@ -260,12 +263,12 @@ mb.on('ready', function ready () {
   /////////////////////////
   // Startup function  
   var serverData = new harpServers(storagePath);
-
+  
 
   
   /////////////////////////
   // Listen from frontend
-  
+   
   // Send list of servers to mb on request
   ipc.on('request-servers', function(event, arg) {
     console.log(arg);
@@ -275,24 +278,22 @@ mb.on('ready', function ready () {
   // Listen for a new server
   ipc.on('new-server', function(event, server) {
     serverData.new(server);
+    event.sender.send('force-update', serverData.findAllSO());
   });
 
   // Delete server
   ipc.on('delete-server', function(event, id) {
     serverData.delete(id);
-    mb.window.webContents.send('force-update', 'callback');
+    event.sender.send('force-update', serverData.findAllSO());
   });
-  
   
   // Listen for an updated server
   ipc.on('update-server', function(event, server) {
-    console.log("update server received");
-    console.log("server is "+server.status);
     serverData.update(server, function() {
-      console.log("Updated server");
-      mb.window.webContents.send('force-update', 'callback');
+      console.log("Updated server "+server.name);
+      event.sender.send('force-update', serverData.findAllSO());
     });
-  });    
+  }); 
   
   // Listen for toggle harp server request
   ipc.on('toggle-request', function(event, id) {
@@ -310,11 +311,22 @@ mb.on('ready', function ready () {
     });
   });
   
-  
   // Open a requested port 
   ipc.on('open-url', function(event, port) {
-    shell.openExternal("http://localhost:" + port);
+    event.sender.openDevTools();
+   // shell.openExternal("http://localhost:" + port);
   });
+  
+  // Resize window to requested height
+  ipc.on('doc-height', function(event,height) {
+    mb.window.setSize(250, height);
+  });  
+  
+  // First run
+  ipc.on('update-request', function(event,message) {
+    console.log(message);
+    event.sender.send('force-update', serverData.findAllSO());
+  });  
   
   
   

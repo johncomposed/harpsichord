@@ -24,8 +24,8 @@ html
           .left
             span.title {{ server.name }}
             a(ng-click='launchSite(server.port)').port-box {{ server.port }}
-            a(ng-click='compileSite(server.id)').fa.fa-arrow-circle-down
             a(ng-click='toggleSettings(server)').fa.fa-gear 
+            a(ng-show="server.compileDir", ng-click='compileSite(server.id)').fa.fa-arrow-circle-down
           .right
             //.on or .off
             a(ng-click='toggleStatus(server.id)', class='{{ server.status }}').fa.fa-circle 
