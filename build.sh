@@ -5,7 +5,7 @@ git ls-files --other --error-unmatch . >/dev/null 2>&1; ec=$?
 
 if test "$ec" = 0; then
     echo "Uncommited changes, remember to commit with something like: "
-    echo "git add -A & git commit -m 'Updated site'"
+    echo "git add -A && git commit -m 'Updated site'"
     
 elif test "$ec" = 1; then
     echo "All changes commited, running build"    # Let user know running script's running
