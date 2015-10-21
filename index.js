@@ -6,7 +6,7 @@ var path = require('path');
 
 
 // note: grunt copied image is broken - why?
-var mb = menubar({ dir: __dirname + '/app', icon:__dirname + '/dark.png', preloadWindow: true, width:250, fullscreen: false });
+var mb = menubar({ dir: __dirname + '/app', icon:__dirname + '/dark.png', preloadWindow: true, width:250, resizable:false, fullscreen: false });
 
 
 // Create harpServer object
@@ -269,14 +269,26 @@ mb.on('ready', function ready () {
   /////////////////////////
   // Listen from frontend
    
-  // Send list of servers to mb on request
-  ipc.on('request-servers', function(event, arg) {
-    console.log(arg);
-    event.returnValue = serverData.findAllSO();
-  });
+  // Update window scope
+  ipc.on('update-request', function(event,message) {
+    console.log(message);
+    event.sender.send('force-update', serverData.findAllSO());
+  });  
   
   // Listen for a new server
-  ipc.on('new-server', function(event, server) {
+  ipc.on('new-server', function(event, message) {
+    console.log(message);
+    
+    var server = {
+      id: +new Date(),
+      name: "New Server",
+      port: 9000,
+      dir: path.join(__dirname,"app","lib","starter"),
+      status: "off",
+      settings: true,
+      compileDir: ""
+    }
+    
     serverData.new(server);
     event.sender.send('force-update', serverData.findAllSO());
   });
@@ -298,8 +310,8 @@ mb.on('ready', function ready () {
   // Listen for toggle harp server request
   ipc.on('toggle-request', function(event, id) {
     serverData.toggle(id, function () {
-      console.log(serverData.findAllSO());
-      event.sender.send('toggle-response', id);
+      console.log("Toggled" + id);
+      event.sender.send('force-update', serverData.findAllSO());
     });
     
   });
@@ -311,10 +323,10 @@ mb.on('ready', function ready () {
     });
   });
   
-  // Open a requested port 
+  // Open a requested localhost:port in external browser 
   ipc.on('open-url', function(event, port) {
-    event.sender.openDevTools();
-   // shell.openExternal("http://localhost:" + port);
+    //event.sender.toggleDevTools();
+    shell.openExternal("http://localhost:" + port);
   });
   
   // Resize window to requested height
@@ -322,19 +334,6 @@ mb.on('ready', function ready () {
     mb.window.setSize(250, height);
   });  
   
-  // First run
-  ipc.on('update-request', function(event,message) {
-    console.log(message);
-    event.sender.send('force-update', serverData.findAllSO());
-  });  
-  
-  
-  
+
+    
 });
-
-
-
-
-
-
-//event.sender.toggleDevTools();

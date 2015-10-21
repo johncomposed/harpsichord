@@ -11,17 +11,6 @@ app.controller('serverListController', function($scope) {
   var _this = $scope;
 
   _this.quietMode = false;
-  
-  var helloWorldServer = {
-    id: +new Date(),
-    name: "New Server",
-    port: 9000,
-    dir: "/Users/john/Github/autoHarp/harpsichord/app/lib/starter/",
-    status: "off",
-    settings: true,
-    compileDir: ""
-  };
-  
 
   ipc.on('force-update', function(servers) {
     console.log('force updated'); 
@@ -41,8 +30,7 @@ app.controller('serverListController', function($scope) {
   _this.allServers = {};
     
   _this.addServer = function() {
-    console.log("addServer clicked");
-    ipc.send('new-server', helloWorldServer);
+    ipc.send('new-server', "addServer Clicked");
   };
   
   _this.deleteServer = function(id) {
@@ -52,10 +40,6 @@ app.controller('serverListController', function($scope) {
   _this.toggleStatus = function(id) {
     if (!_this.quietMode) {
       ipc.send('toggle-request', id);
-      
-      ipc.on('toggle-response', function() {
-        ipc.send('update-request', "Toggle " + id);
-      });
     }    
   };
   
@@ -66,10 +50,9 @@ app.controller('serverListController', function($scope) {
           _this.toggleStatus(_this.allServers[i].id);
         }    
       }
-      _this.quietMode = true;
-    } else {
-      _this.quietMode = false;
-    }
+    } 
+    
+    _this.quietMode = !_this.quietMode;
   };
   
   _this.launchSite = function(port) {
@@ -77,12 +60,12 @@ app.controller('serverListController', function($scope) {
   };
   
   _this.toggleSettings = function(server) { 
-    if (!server.settings) {
-      server.settings = true;
-    } else {
-      server.settings = false;
-    }
-    ipc.send('update-server', server);    
+    // Copying server object so scope is updated after ipc.send
+    var model = JSON.parse(JSON.stringify(server));
+    
+    model.settings = !model.settings; 
+    
+    ipc.send('update-server', model);    
   };
 
   _this.compileSite = function(id) {
@@ -90,7 +73,5 @@ app.controller('serverListController', function($scope) {
   };
   
   
-  
   _this.init();
 });
-
