@@ -9,6 +9,7 @@ if test "$ec" = 0; then
     
 elif test "$ec" = 1; then
     echo "All changes commited, running build"    # Let user know running script's running
+    git subtree pull --prefix www origin gh-pages # Pulling old site into www
     rm www/*                                      # Just making sure it's clear
     harp compile harp/ www/ &                     # Compile harp
     build_pid=$!                                  # Grabbing pid of harp process 
