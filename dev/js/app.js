@@ -37,10 +37,10 @@ app.controller('serverListController', function($scope) {
     ipc.send('delete-server', id);
   };
   
-  _this.toggleStatus = function(id) {
-    if (!_this.quietMode) {
-      ipc.send('toggle-request', id);
-    }    
+  _this.toggleStatus = function(server) {
+    if (!_this.quietMode) {      
+      ipc.send('toggle-request', server);
+    }
   };
   
   _this.toggleQuietMode = function() {
@@ -62,7 +62,6 @@ app.controller('serverListController', function($scope) {
   _this.toggleSettings = function(server) { 
     // Copying server object so scope is updated after ipc.send
     var model = JSON.parse(JSON.stringify(server));
-    
     model.settings = !model.settings; 
     
     ipc.send('update-server', model);    

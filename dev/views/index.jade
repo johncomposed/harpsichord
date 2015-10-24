@@ -27,7 +27,7 @@ html
             a(ng-show="server.compileDir", ng-click='compileSite(server.id)').fa.fa-arrow-circle-down
           .right
             //.on or .off
-            a(ng-click='toggleStatus(server.id)', ng-class="quietMode ? 'fa-times-circle' : 'fa-circle' ", class='{{ server.status }}').fa 
+            a(ng-click='toggleStatus(server)', ng-class="quietMode ? 'fa-times-circle' : 'fa-circle' ", class='{{ server.status }}').fa 
         .settings(ng-show="server.settings")
           .row
             .name

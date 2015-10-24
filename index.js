@@ -6,7 +6,7 @@ var path = require('path');
 
 
 // note: grunt copied image is broken - why?
-var mb = menubar({ dir: __dirname + '/app', icon:__dirname + '/dark.png', preloadWindow: true, width:250, resizable:false, fullscreen: false });
+var mb = menubar({ dir: path.join(__dirname,'app'), icon: path.join(__dirname,'dark.png'), preloadWindow: true, width: 250, resizable: false, fullscreen: false });
 
 
 // Create harpServer object
@@ -155,7 +155,6 @@ mb.on('ready', function ready () {
   console.log('app is ready');
 
   var fs = require("fs");
-  var path = require('path');
   var ipc = require('ipc');
   var shell = require('shell');
   var BrowserWindow = require('browser-window');
@@ -308,11 +307,24 @@ mb.on('ready', function ready () {
   }); 
   
   // Listen for toggle harp server request
-  ipc.on('toggle-request', function(event, id) {
-    serverData.toggle(id, function () {
-      console.log("Toggled" + id);
-      event.sender.send('force-update', serverData.findAllSO());
-    });
+  ipc.on('toggle-request', function(event, server) {
+    
+    // TODO: a better solution for this, but at least the UX is better this way
+    if (server.settings) {
+      server.settings = !server.settings; 
+      
+      serverData.update(server, function() { 
+        serverData.toggle(server.id, function () {
+          console.log("Updated and toggled" + server.id);
+          event.sender.send('force-update', serverData.findAllSO());
+        }); 
+      });
+    } else {
+      serverData.toggle(server.id, function () {
+        console.log("Toggled" + server.id);
+        event.sender.send('force-update', serverData.findAllSO());
+      });
+    }
     
   });
   
