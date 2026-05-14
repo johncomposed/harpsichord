@@ -14,8 +14,10 @@ app.whenReady().then(() => {
     browserWindow: {
       width: 250,
       height: 400,
-      resizable: false,
+      resizable: true,
+      minHeight: 100,
       fullscreenable: false,
+      useContentSize: true,
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
@@ -252,6 +254,14 @@ function setupIpc() {
   });
 
   ipcMain.on('doc-height', (event, height) => {
-    if (mb.window) mb.window.setSize(250, Math.max(100, Math.round(height)));
+    if (!mb || !mb.window) return;
+    const newHeight = Math.max(100, Math.round(height));
+    mb.window.setSize(250, newHeight);
+
+    if (process.platform === 'win32') {
+      mb.positioner.move('bottomRight');
+    } else {
+      mb.positioner.move('trayCenter', mb.tray.getBounds());
+    }
   });
 }

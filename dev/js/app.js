@@ -13,12 +13,14 @@ app.controller('serverListController', function($scope) {
   _this.quietMode = false;
 
   ipc.on('force-update', function(event, servers) {
-    console.log('force updated'); 
     $scope.$apply(function(){
       _this.allServers = servers;
     });
-    $scope.$apply(function(){
-      ipc.send('doc-height', document.body.offsetHeight);
+    requestAnimationFrame(function(){
+      var header = document.querySelector('header');
+      var main = document.querySelector('main');
+      var h = (header ? header.offsetHeight : 0) + (main ? main.offsetHeight : 0);
+      ipc.send('doc-height', h);
     });
   });
    
