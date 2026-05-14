@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Main</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" type="text/css" href="lib/reset.css" />
+    <link rel="stylesheet" type="text/css" href="css/app.css" />
+  </head>
+  <body>
+    <header class="row">
+      <a id="add-server" class="fa fa-plus"></a>
+      <a id="quiet-mode" class="fa fa-check-circle"></a>
+    </header>
+    <main id="server-list"></main>
+
+    <template id="server-template">
+      <section>
+        <div class="row">
+          <div class="left">
+            <span class="title" data-field="name"></span>
+            <a class="port-box" data-action="launch" data-field="port"></a>
+            <a class="fa fa-gear" data-action="toggle-settings"></a>
+            <a class="fa fa-arrow-circle-down" data-action="compile" data-show-if="compileDir"></a>
+          </div>
+          <div class="right">
+            <a class="fa fa-circle" data-action="toggle-status"></a>
+          </div>
+        </div>
+        <div class="settings">
+          <div class="row">
+            <div class="name">
+              <label>Name</label>
+              <input data-input="name" type="text" />
+            </div>
+            <div class="port">
+              <label>Port</label>
+              <input data-input="port" min="8000" max="9999" maxlength="4" type="number" />
+            </div>
+          </div>
+          <div class="setting">
+            <label>Directory</label>
+            <input data-input="dir" type="text" />
+          </div>
+          <div class="setting">
+            <label>Compile Directory</label>
+            <input data-input="compileDir" type="text" />
+          </div>
+          <div class="del-row">
+            <a class="del" data-action="delete">Delete server</a>
+          </div>
+        </div>
+      </section>
+    </template>
+
+    <script src="js/app.js"></script>
+  </body>
+</html>

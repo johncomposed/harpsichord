@@ -1,351 +1,244 @@
-/* global require, __dirname */
+const { app, ipcMain, shell } = require('electron');
+const { menubar } = require('menubar');
+const { fork } = require('child_process');
+const path = require('path');
+const fs = require('fs');
 
-var menubar = require('menubar');
-var forkme = require('forkme');
-var path = require('path');
+let mb;
+app.whenReady().then(() => {
+  mb = menubar({
+    index: `file://${path.join(__dirname, 'app', 'index.html')}`,
+    icon: path.join(__dirname, 'dark.png'),
+    preloadWindow: true,
+    browserWindow: {
+      width: 250,
+      height: 400,
+      resizable: false,
+      fullscreenable: false,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+      },
+    },
+  });
+  mb.on('ready', onReady);
+});
 
-
-// note: grunt copied image is broken - why?
-var mb = menubar({ dir: path.join(__dirname,'app'), icon: path.join(__dirname,'dark.png'), preloadWindow: true, width: 250, resizable: false, fullscreen: false });
-
-
-// Create harpServer object
-var harpServer = function(serverObject) {
-  console.log("New hs made");
-  
+function HarpServer(serverObject) {
   this.port = serverObject.port;
   this.status = serverObject.status;
   this.dir = serverObject.dir;
   this.compileDir = serverObject.compileDir;
   this.name = serverObject.name;
   this.settings = serverObject.settings;
-  this.id = serverObject.id; 
-  
-};
+  this.id = serverObject.id;
+}
 
-harpServer.prototype.serve = function(callback){
-  var _this = this;
-  
-  this.server = forkme([this], function(parent) { 
-    // NOTE: Now running in a forked child process
-    var harp = require("harp");
-    
-    harp.server(parent.dir, { port: parent.port }, function (errors){
-      if (errors) {
-        console.log(JSON.stringify(errors, null, 2));
-        process.exit(1);
-      }
-      console.log('Running harp at '+ parent.dir +' on ' + parent.port);
-      process.send("running");
-    });
-    
-    process.on('message', function(m) {
-      var options = {
-        'stop': function() { process.exit(1); },
-        'sayhi': function() { process.send("hi"); }
-      };
-      
-      if (options[m]) {
-        options[m]();
-      } else {
-        console.log(m);
-      }      
-    });
-    
-    // Make sure it exits if not connected
-    process.on('disconnect',function() {
-      process.exit();
-    });
-    
-  });
-  
-  // Listen for messages, will later use for logs
-  this.server.on('message', function(m) {
-    var options = {
-      'running': function() { _this.status = "on"; if (callback) { callback(); } }
-    };
+HarpServer.prototype.serve = function (callback) {
+  const _this = this;
+  const workerPath = path.join(__dirname, 'harp-worker.js');
 
-    if (options[m]) {
-      options[m]();
+  this.server = fork(workerPath, [], { silent: false });
+  this.server.send({ type: 'start', dir: this.dir, port: this.port });
+
+  this.server.on('message', (m) => {
+    if (m === 'running') {
+      _this.status = 'on';
+      if (callback) callback();
     } else {
       console.log(m);
     }
   });
-  
 };
 
-harpServer.prototype.stop = function(callback){
-  var _this = this;
+HarpServer.prototype.stop = function (callback) {
+  const _this = this;
   if (this.server && this.server.connected) {
     this.server.send('stop');
-    
-    this.server.on('exit', function (code, signal) {
-      _this.status = "off";
-      if (callback) { callback(); }
+    this.server.on('exit', (code, signal) => {
+      _this.status = 'off';
+      if (callback) callback();
       console.log('Child exited:', code, signal);
-
     });
   } else {
-    console.log("tried to stop "+ this.id + " when no harp server running");
-    this.status = "off";
-    if (callback) { callback(); }
+    this.status = 'off';
+    if (callback) callback();
   }
-  
 };
 
-harpServer.prototype.compile = function(callback){
-  var _this = this;
-  var harp = require("harp");
-
+HarpServer.prototype.compile = function (callback) {
+  const harp = require('harp');
   if (this.compileDir) {
-    harp.compile(this.dir, this.compileDir, function(errors, output){
+    harp.compile(this.dir, this.compileDir, (errors, output) => {
       console.log(output, errors);
-
-      if (callback) { callback(); }
+      if (callback) callback();
     });
   } else {
-    console.log("error, no compiledir");
+    console.log('error, no compileDir');
   }
-  
-
-  
-  
 };
 
-harpServer.prototype.serverObject = function() {
-  var serverObj = {};
-  serverObj.port = this.port;
-  serverObj.status = this.status;
-  serverObj.dir = this.dir;
-  serverObj.settings = this.settings;
-  serverObj.compileDir = this.compileDir;
-  serverObj.name = this.name;
-  serverObj.id = this.id; 
-
-  return serverObj;
+HarpServer.prototype.serverObject = function () {
+  return {
+    port: this.port,
+    status: this.status,
+    dir: this.dir,
+    settings: this.settings,
+    compileDir: this.compileDir,
+    name: this.name,
+    id: this.id,
+  };
 };
 
-harpServer.prototype.update = function(newServerObject, callback) {
-  var _this = this;
+HarpServer.prototype.update = function (newServerObject, callback) {
+  const _this = this;
+  const apply = () => {
+    _this.port = newServerObject.port;
+    _this.dir = newServerObject.dir;
+    _this.compileDir = newServerObject.compileDir;
+    _this.settings = newServerObject.settings;
+    _this.name = newServerObject.name;
+  };
+
   if (this.status === 'on') {
-    this.stop(function(){
-      _this.port = newServerObject.port;
-      _this.dir = newServerObject.dir;
-      _this.compileDir = newServerObject.compileDir;
-      _this.settings = newServerObject.settings;
-      _this.name = newServerObject.name;
-
-      _this.serve(function(){ callback(); });
+    this.stop(() => {
+      apply();
+      _this.serve(() => callback());
     });
-    
-    
   } else {
-    this.port = newServerObject.port;
-    this.dir = newServerObject.dir;
-    this.compileDir = newServerObject.compileDir;
-    this.settings = newServerObject.settings;
-    this.name = newServerObject.name;
+    apply();
     callback();
   }
 };
 
-
-
-mb.on('ready', function ready () {
+function onReady() {
   console.log('app is ready');
 
-  var fs = require("fs");
-  var ipc = require('ipc');
-  var shell = require('shell');
-  var BrowserWindow = require('browser-window');
-  var storagePath = path.join(__dirname, "servers.json");
-  
+  const storagePath = path.join(app.getPath('userData'), 'servers.json');
 
-  
-  /////////////////////////
-  // harpServers object functions
-  var harpServers = function(storagePath) { 
-    var _this = this;
+  function HarpServers(storagePath) {
+    const _this = this;
+    const servers = {};
 
-    // Object containing all harp server instances
-    // Private so nothing interacts with it directly
-    var harpServers = {};
-    
-    // Load up saved data or create storage file if it doesn't exist
     if (fs.existsSync(storagePath)) {
-      var saveData = JSON.parse(fs.readFileSync(storagePath));
-      // Load up harp servers
-      for (var i = 0; i < saveData.length; i++) {
-        harpServers[saveData[i].id] = new harpServer(saveData[i]);
-      }
-      console.log("Harp servers found and loaded up");
+      const saveData = JSON.parse(fs.readFileSync(storagePath));
+      for (const s of saveData) servers[s.id] = new HarpServer(s);
     } else {
       fs.writeFileSync(storagePath, JSON.stringify([], null, 4));
     }
-    
-    // Start up any harp servers with status on 
-    for (var key in harpServers) {
-      if (harpServers[key].status === "on") {
-        harpServers[key].serve();
-        console.log("Started up " + harpServers[key].name);
+
+    for (const key in servers) {
+      if (servers[key].status === 'on') {
+        servers[key].serve();
       }
-    } 
-    
-    
-    // Public Functions
-    // New Server
-    this.new = function(serverObject){
-      harpServers[serverObject.id] = new harpServer(serverObject);
+    }
+
+    this.new = function (serverObject) {
+      servers[serverObject.id] = new HarpServer(serverObject);
       this.save();
     };
-    
-    // Update Server
-    this.update = function(serverObject,callback) {
-      harpServers[serverObject.id].update(serverObject, function(){
+
+    this.update = function (serverObject, callback) {
+      servers[serverObject.id].update(serverObject, () => {
         _this.save();
         callback();
       });
     };
 
-    // Delete Server
-    this.delete = function(id) {
-      harpServers[id].stop();
-      delete harpServers[id];
+    this.delete = function (id) {
+      servers[id].stop();
+      delete servers[id];
       this.save();
     };
-    
-    // Start or stop a server
-    this.toggle = function(id, callback) {
-      if (harpServers[id].status === "on") {
-        harpServers[id].stop(function () {
-          console.log(harpServers[id].name + " stopped");
+
+    this.toggle = function (id, callback) {
+      if (servers[id].status === 'on') {
+        servers[id].stop(() => {
           _this.save();
           callback();
         });
       } else {
-        harpServers[id].serve(function () {
+        servers[id].serve(() => {
           _this.save();
           callback();
         });
       }
     };
-    
-    // Compile a site
-    this.compile = function(id, callback) {
-      harpServers[id].compile(function(){
-        if (callback) { callback(); }
+
+    this.compile = function (id, callback) {
+      servers[id].compile(() => {
+        if (callback) callback();
       });
     };
-    
-    // Find and return serverObject
-    this.findSO = function(id) {
-      return harpServers[id].serverObject();
-    };
-    
-    // Find and return all server objects
-    this.findAllSO = function() {
-      var allSO = [];
-      for (var key in harpServers) {      
-        allSO.push(harpServers[key].serverObject());
-      } 
-      return allSO;
-    };
-    
-    // Save all server objects.
-    this.save = function() {
-      fs.writeFileSync(storagePath, JSON.stringify(this.findAllSO(), null, 4));  
-    }; 
-    
-  };
-  
-  
-  /////////////////////////
-  // Startup function  
-  var serverData = new harpServers(storagePath);
-  
 
-  
-  /////////////////////////
-  // Listen from frontend
-   
-  // Update window scope
-  ipc.on('update-request', function(event,message) {
-    console.log(message);
+    this.findSO = function (id) {
+      return servers[id].serverObject();
+    };
+
+    this.findAllSO = function () {
+      return Object.values(servers).map((s) => s.serverObject());
+    };
+
+    this.save = function () {
+      fs.writeFileSync(storagePath, JSON.stringify(this.findAllSO(), null, 4));
+    };
+  }
+
+  const serverData = new HarpServers(storagePath);
+
+  ipcMain.on('update-request', (event) => {
     event.sender.send('force-update', serverData.findAllSO());
-  });  
-  
-  // Listen for a new server
-  ipc.on('new-server', function(event, message) {
-    console.log(message);
-    
-    var server = {
+  });
+
+  ipcMain.on('new-server', (event) => {
+    const server = {
       id: +new Date(),
-      name: "New Server",
+      name: 'New Server',
       port: 9000,
-      dir: path.join(__dirname,"app","lib","starter"),
-      status: "off",
+      dir: path.join(__dirname, 'app', 'lib', 'starter'),
+      status: 'off',
       settings: true,
-      compileDir: ""
-    }
-    
+      compileDir: '',
+    };
     serverData.new(server);
     event.sender.send('force-update', serverData.findAllSO());
   });
 
-  // Delete server
-  ipc.on('delete-server', function(event, id) {
+  ipcMain.on('delete-server', (event, id) => {
     serverData.delete(id);
     event.sender.send('force-update', serverData.findAllSO());
   });
-  
-  // Listen for an updated server
-  ipc.on('update-server', function(event, server) {
-    serverData.update(server, function() {
-      console.log("Updated server "+server.name);
+
+  ipcMain.on('update-server', (event, server) => {
+    serverData.update(server, () => {
       event.sender.send('force-update', serverData.findAllSO());
     });
-  }); 
-  
-  // Listen for toggle harp server request
-  ipc.on('toggle-request', function(event, server) {
-    
-    // TODO: a better solution for this, but at least the UX is better this way
+  });
+
+  ipcMain.on('toggle-request', (event, server) => {
     if (server.settings) {
-      server.settings = !server.settings; 
-      
-      serverData.update(server, function() { 
-        serverData.toggle(server.id, function () {
-          console.log("Updated and toggled" + server.id);
+      server.settings = !server.settings;
+      serverData.update(server, () => {
+        serverData.toggle(server.id, () => {
           event.sender.send('force-update', serverData.findAllSO());
-        }); 
+        });
       });
     } else {
-      serverData.toggle(server.id, function () {
-        console.log("Toggled" + server.id);
+      serverData.toggle(server.id, () => {
         event.sender.send('force-update', serverData.findAllSO());
       });
     }
-    
   });
-  
-  // Compile a server
-  ipc.on('compile-site', function(event, id) {
-    serverData.compile(id, function() {
-      console.log("Compiled!");
-    });
-  });
-  
-  // Open a requested localhost:port in external browser 
-  ipc.on('open-url', function(event, port) {
-    //event.sender.toggleDevTools();
-    shell.openExternal("http://localhost:" + port);
-  });
-  
-  // Resize window to requested height
-  ipc.on('doc-height', function(event,height) {
-    mb.window.setSize(250, height);
-  });  
-  
 
-    
-});
+  ipcMain.on('compile-site', (event, id) => {
+    serverData.compile(id, () => console.log('Compiled!'));
+  });
+
+  ipcMain.on('open-url', (event, port) => {
+    shell.openExternal(`http://localhost:${port}`);
+  });
+
+  ipcMain.on('doc-height', (event, height) => {
+    if (mb.window) mb.window.setSize(250, Math.max(100, Math.round(height)));
+  });
+}

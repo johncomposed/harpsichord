@@ -2,3 +2,5 @@ node_modules/
 dev/build/
 app/
 servers.json
+out.log
+err.log
