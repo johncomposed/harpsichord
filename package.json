@@ -10,6 +10,9 @@
   "devDependencies": {
     "electron": "^28.3.3"
   },
+  "optionalDependencies": {
+    "less": "^4.6.4"
+  },
   "scripts": {
     "build": "node build.js",
     "start": "npm run build && electron .",
