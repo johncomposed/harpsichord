@@ -6,6 +6,7 @@ const fs = require('fs');
 
 let mb;
 app.whenReady().then(() => {
+  setupIpc();
   mb = menubar({
     index: `file://${path.join(__dirname, 'app', 'index.html')}`,
     icon: path.join(__dirname, 'dark.png'),
@@ -21,7 +22,7 @@ app.whenReady().then(() => {
       },
     },
   });
-  mb.on('ready', onReady);
+  mb.on('ready', () => console.log('app is ready'));
 });
 
 function HarpServer(serverObject) {
@@ -111,10 +112,22 @@ HarpServer.prototype.update = function (newServerObject, callback) {
   }
 };
 
-function onReady() {
-  console.log('app is ready');
-
+function setupIpc() {
   const storagePath = path.join(app.getPath('userData'), 'servers.json');
+  const legacyPath = path.join(__dirname, 'servers.json');
+  const isEmpty = (p) => {
+    try {
+      const data = JSON.parse(fs.readFileSync(p));
+      return Array.isArray(data) && data.length === 0;
+    } catch {
+      return true;
+    }
+  };
+  if ((!fs.existsSync(storagePath) || isEmpty(storagePath)) && fs.existsSync(legacyPath)) {
+    fs.mkdirSync(path.dirname(storagePath), { recursive: true });
+    fs.copyFileSync(legacyPath, storagePath);
+    console.log('Migrated servers.json into', storagePath);
+  }
 
   function HarpServers(storagePath) {
     const _this = this;

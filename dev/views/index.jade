@@ -1,0 +1,48 @@
+doctype
+html
+  head
+    title Main
+    // Styles
+    link(rel="stylesheet", type='text/css', href="lib/font-awesome.min.css")
+    link(rel='stylesheet', type='text/css', href='lib/reset.css')
+    link(rel='stylesheet', type='text/css', href='css/app.css')
+
+    // Libraries
+    script(type='text/javascript', src='lib/angular.min.js')
+
+    // Javascript
+    script(type='text/javascript', src='js/app.js')
+    
+  body(ng-app="harpsichord", ng-controller='serverListController')
+    header.row
+      a(ng-click='addServer()').fa.fa-plus
+      a.fa(ng-click='toggleQuietMode()', ng-class="quietMode ? 'fa-times' : 'fa-check-circle' ")
+    main
+      section(ng-repeat='server in allServers track by $index')
+        .row
+          .left
+            span.title {{ server.name }}
+            a(ng-click='launchSite(server.port)').port-box {{ server.port }}
+            a(ng-click='toggleSettings(server)').fa.fa-gear 
+            a(ng-show="server.compileDir", ng-click='compileSite(server.id)').fa.fa-arrow-circle-down
+          .right
+            //.on or .off
+            a(ng-click='toggleStatus(server)', ng-class="quietMode ? 'fa-times-circle' : 'fa-circle' ", class='{{ server.status }}').fa 
+        .settings(ng-show="server.settings")
+          .row
+            .name
+              label(for='name') Name
+              input#name(ng-model="server.name", type='text')
+            .port
+              label(for='port') Port
+              input#port(ng-model="server.port", min="8000", max="9999", maxlength='4', type='number')
+          .setting
+            label(for='dir') Directory
+            input#dir(ng-model="server.dir", type='text')
+          .setting
+            label(for='cdir') Compile Directory
+            input#cdir(ng-model="server.compileDir", type='text')
+          .del-row
+            a.del(ng-click="deleteServer(server.id)") Delete server
+
+        

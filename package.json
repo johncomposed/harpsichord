@@ -8,7 +8,8 @@
     "menubar": "^9.5.2"
   },
   "devDependencies": {
-    "electron": "^28.3.3"
+    "electron": "^28.3.3",
+    "stylus": "^0.59.0"
   },
   "optionalDependencies": {
     "less": "^4.6.4"
